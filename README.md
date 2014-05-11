@@ -1,4 +1,4 @@
-simlpeGrid
+Endless
 ========
 
 Fires a callback when scroll has reached the end
