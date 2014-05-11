@@ -16,7 +16,7 @@
 
             $el
                 //.resize( endless.onHeightChange.bind(endless) )
-                .scroll( _.throttle(endless.getScrollPos.bind(endless), 100) );
+                .scroll( endless.getScrollPos.bind(endless) );
 
             $el.data('_endless', endless);
         });
