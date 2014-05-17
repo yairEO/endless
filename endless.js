@@ -35,7 +35,7 @@
 
     Endless.prototype = {
         onHeightChange: function(){
-            var offset = this.settings.offset;
+            var offset = this.settings.offset || 0;
             if( this.el[0] == window )
                 this.height = document.documentElement.scrollHeight;
             else
@@ -61,7 +61,7 @@
             scroll += ownHeight; // add the container's height to get the total scroll from the bottom and not from the top
 
             // if reached the "end" point
-            if( scroll + this.offset > this.height ){
+            if( scroll + this.offset >= this.height ){
                 if( typeof this.callback == 'function' )
                     this.callback(); // do something once reached the end (load more stuff)
 
