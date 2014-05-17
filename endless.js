@@ -1,6 +1,6 @@
 // endless scroll - jQuery plugin
 // by: Yair Even-or (2014)
-// dropthebit.com
+// Dropthebit.com
 
 (function($){
     jQuery.fn.endless = function(settings){
