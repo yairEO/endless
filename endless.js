@@ -1,73 +1,75 @@
-// endless scroll - jQuery plugin
-// by: Yair Even-or (2014)
-// Dropthebit.com
-
+////////////////////////////////////////
+// endless scroll
 (function($){
-    jQuery.fn.endless = function(settings){
+    jQuery.fn.endless = function(settings, cb){
         return this.each(function(){
-            var $el = $(this),
+
+            var $el = $(this), // convert window to the HTML element
                 endless;
 
-            // if element already the pluging bound to it, return
             if( $el.data('_endless') )
                 return;
 
-            endless = new Endless($el, settings);
+            endless = new Endless($el, settings, cb);
 
-            $el
-                //.resize( endless.onHeightChange.bind(endless) )
-                .scroll( endless.getScrollPos.bind(endless) );
+            $el.on('scroll.endless', endless.getScrollPos.bind(endless) ); // you should really use throttling here.. like "_.throttle()"
+             //.on('resize.endless', endless.onHeightChange.bind(endless) );
 
             $el.data('_endless', endless);
         });
     }
 
-    function Endless($el, settings){
-        this.el = $el;
+    function Endless($el, settings, cb){
+        this.el       = $el[0] == window ? $(document.documentElement) : $el;
+        this.type     = 'pixels'; //  can be 'pixels' or 'percentages'
         this.settings = $.extend({},settings);
-        this.height = null;
-        this.offset = null; // the extra offset before scroll has reached the end
-        this.callback = settings.callback ? settings.callback : null;
+        this.height   = null;
+        this.callback = cb || function(){};
+        this.stop     = false;
+        this.maxScrollSoFar = 0;
 
-        this.onHeightChange(); // calculate;
+        // parse the "offset"
+        var offset = this.settings.offset;
+
+        // type percentages
+        if( typeof offset == 'string' && offset.charAt(offset.length - 1) == '%' )
+            this.type = 'percentages';
+
+        this.offset = this.settings.offset ? parseInt(this.settings.offset) : 0;
+
+        // run once initialized
         this.getScrollPos();
     }
 
     Endless.prototype = {
-        onHeightChange: function(){
-            var offset = this.settings.offset || 0;
-            if( this.el[0] == window )
-                this.height = document.documentElement.scrollHeight;
-            else
-                this.height = this.el[0].scrollHeight;
-
-            this.offset = (typeof offset == 'string') ? this.height * (parseInt(offset) / 100) : offset;
-
-        },
         getScrollPos: function(e){
-            var scroll, ownHeight;
+            var scroll,
+                ownHeight,
+                that = this;
 
-            this.onHeightChange();
+            if( that.stop ) return;
 
-            if( this.el[0] == window ){
-                scroll    = window.pageYOffset || document.documentElement.scrollTop;
-                ownHeight = $(window).height();
-            }
-            else{
-                scroll    = this.el[0].scrollTop;
-                ownHeight = this.el[0].clientHeight;
-            }
+			// fix for iOS Safari not reading "scrollTop" of the HTML element
+			scroll = that.el[0] == document.documentElement ? window.pageYOffset : that.el[0].scrollTop;
+			// do nothing when scroll up, only down
+			if( scroll < that.maxScrollSoFar )
+				return;
 
-            scroll += ownHeight; // add the container's height to get the total scroll from the bottom and not from the top
+			that.height = that.el[0].scrollHeight;
+			ownHeight   = that.el[0].clientHeight;
 
-            // if reached the "end" point
-            if( scroll + this.offset >= this.height ){
-                if( typeof this.callback == 'function' )
-                    this.callback(); // do something once reached the end (load more stuff)
+			that.maxScrollSoFar = Math.max(that.maxScrollSoFar, scroll) || 0;
 
-                this.onHeightChange(); // re-calculate height ad offset;
-            }
-            //  console.log([scroll, this.height], scroll + this.offset );
+			// if reached the "end" point
+			if( that.type == 'percentages' && (scroll / (that.height - ownHeight)) * 100 > ( 100 - that.offset ) ){
+			   // lock endless scrolling for a brief moment, to let new content change the height of the endless element
+				that.stop = true;
+				setTimeout(function(){ that.stop = false; that.getScrollPos(); }, 1000);
+				that.callback();
+			}
+			// for pixels distance:
+			else if( that.type == 'pixels' && scroll + ownHeight + that.offset >= that.height )
+				that.callback();
         }
     }
 })(jQuery);
